@@ -2,20 +2,20 @@
 import Foundation
 import UIKit
 
-class AuthenticationViewController : UIViewController, UIWebViewDelegate{
+class AuthenticationViewController: UIViewController, UIWebViewDelegate{
 
-    let expectedState:String = "authDone"
+    let expectedState: String = "authDone"
     
     var webView: UIWebView?
     
-    var successCallback : ((code:String)-> Void)?
-    var failureCallback : ((error:NSError) -> Void)?
+    var successCallback: ((code: String)-> Void)?
+    var failureCallback: ((error: NSError) -> Void)?
 
-    var isRetrievingAuthCode : Bool? = false
+    var isRetrievingAuthCode: Bool? = false
 
-    var oauth2Settings:Oauth2Settings!
+    var oauth2Settings: Oauth2Settings!
     
-    required init(coder aDecoder: NSCoder) {
+    required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
     }
     
@@ -23,7 +23,7 @@ class AuthenticationViewController : UIViewController, UIWebViewDelegate{
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
     }
     
-    init(oauth2Settings: Oauth2Settings, successCallback:((code:String)-> Void), failureCallback:((error:NSError) -> Void)) {
+    init(oauth2Settings: Oauth2Settings, successCallback:((code: String)-> Void), failureCallback: ((error: NSError) -> Void)) {
         super.init(nibName: nil, bundle: nil)
         
         self.oauth2Settings = oauth2Settings
@@ -39,7 +39,7 @@ class AuthenticationViewController : UIViewController, UIWebViewDelegate{
         
         self.webView = UIWebView(frame: self.view.bounds);
         
-        if let bindCheck = self.webView {
+        if let _ = self.webView {
             self.webView!.backgroundColor = UIColor.clearColor()
             self.webView!.scalesPageToFit = true
             self.webView!.delegate = self
@@ -55,69 +55,63 @@ class AuthenticationViewController : UIViewController, UIWebViewDelegate{
         super.viewWillAppear(animated)
         
         // TO alter if more parameters neede
-        var url:String! = self.oauth2Settings.authorizeURL + "?response_type=code&client_id=" + self.oauth2Settings.clientID + "&state=" + expectedState + "&redirect_uri=" + self.oauth2Settings.redirectURL.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLHostAllowedCharacterSet())! + "&scope=" + self.oauth2Settings.scope
-        let urlRequest : NSURLRequest = NSURLRequest(URL: NSURL(string: url)!)
+        let url: String! = self.oauth2Settings.authorizeURL + "?response_type=code&client_id=" + self.oauth2Settings.clientID + "&state=" + expectedState + "&redirect_uri=" + self.oauth2Settings.redirectURL.stringByAddingPercentEncodingWithAllowedCharacters(NSCharacterSet.URLHostAllowedCharacterSet())! + "&scope=" + self.oauth2Settings.scope
+        let urlRequest: NSURLRequest = NSURLRequest(URL: NSURL(string: url)!)
         
         self.webView!.loadRequest(urlRequest)
     }
-    
     
     func cancelAction() {
         self.dismissViewControllerAnimated(true, completion: nil)
     }
     
-    
     func webView(webView: UIWebView, shouldStartLoadWithRequest request: NSURLRequest, navigationType: UIWebViewNavigationType) -> Bool {
         
-        let url : NSString = request.URL!.absoluteString!
-        
-        self.isRetrievingAuthCode = url.hasPrefix(self.oauth2Settings.redirectURL)
-        
-        if (self.isRetrievingAuthCode!) {
-            if(url.rangeOfString("error").location != NSNotFound) {
-                let error:NSError = NSError(domain:"CROAuth2UnknownErrorDomain", code:0, userInfo: nil)
-                self.failureCallback!(error:error)
-            } else {
-                
-                let optionnalState:String? = self.extractParameterFromUrl("state", url: url)
-                
-                if let state = optionnalState {
-                    if (state == expectedState) {
-                        
-                        let optionnalCode:String? = self.extractParameterFromUrl("code", url: url)
-                        if let code = optionnalCode {
-                            self.successCallback!(code:code)
+        if let url: NSString = request.URL?.absoluteString {
+            self.isRetrievingAuthCode = url.hasPrefix(self.oauth2Settings.redirectURL)
+            
+            if (self.isRetrievingAuthCode!) {
+                if (url.rangeOfString("error").location != NSNotFound) {
+                    let error: NSError = NSError(domain: "CROAuth2UnknownErrorDomain", code: 0, userInfo: nil)
+                    self.failureCallback!(error: error)
+                }
+                else {
+                    let optionnalState: String? = self.extractParameterFromUrl("state", url: url)
+                    
+                    if let state = optionnalState {
+                        if (state == expectedState) {
+                            let optionnalCode: String? = self.extractParameterFromUrl("code", url: url)
+                            if let code = optionnalCode {
+                                self.successCallback!(code: code)
+                            }
                         }
                     }
                 }
             }
         }
-        
         return true
-            
     }
     
-    func webView(webView: UIWebView, didFailLoadWithError error: NSError) {
+    func webView(webView: UIWebView, didFailLoadWithError error: NSError?) {
         if (!self.isRetrievingAuthCode!) {
-            self.failureCallback!(error: error)
+            self.failureCallback!(error: error!)
         }
     }
-        
     
-    func extractParameterFromUrl(parameterName:NSString, url:NSString) -> String? {
+    func extractParameterFromUrl(parameterName: NSString, url: NSString) -> String? {
         
-        if(url.rangeOfString("?").location == NSNotFound) {
+        if (url.rangeOfString("?").location == NSNotFound) {
             return nil
         }
         
-        if let urlString: String = url.componentsSeparatedByString("?")[1] as? String {
+        if let urlString: String = url.componentsSeparatedByString("?")[1] {
             var dict = Dictionary <String, String>()
             
             for param in urlString.componentsSeparatedByString("&") {
                 var array = Array <AnyObject>()
                 array = param.componentsSeparatedByString("=")
-                let name:String = array[0] as! String
-                let value:String = array[1] as! String
+                let name: String = array[0] as! String
+                let value: String = array[1] as! String
                 
                 dict[name] = value
             }
